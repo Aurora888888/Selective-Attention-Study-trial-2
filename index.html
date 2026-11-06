@@ -404,28 +404,30 @@ const practiceBlock = {
   timeline: practiceTimeline,
 
 
+
 loop_function: function(data) {
 
     practiceAttempt++;
 
-    // Retrieve the latest eight practice responses.
+    // Retrieve the eight actual practice response trials.
     const responses = jsPsych.data.get()
       .filter({ phase: "practice" })
       .last(8)
       .values();
 
-    // Count correct responses (true or 1).
-    const correctCount = responses.filter(
-      row => row.correct === true || row.correct === 1
+    // Compare the actual key pressed with the correct key.
+    const correctCount = responses.filter(row =>
+      row.response !== null &&
+      row.response !== undefined &&
+      row.response === row.correct_key
     ).length;
 
-    const accuracy =
-      responses.length === 8
-        ? correctCount / 8
-        : 0;
+    const accuracy = responses.length === 8
+      ? correctCount / 8
+      : 0;
 
     practicePassed =
-      responses.length === 8 && accuracy >= 0.75;
+      responses.length === 8 && correctCount >= 6;
 
     practiceHistory.push({
       practice_attempt: practiceAttempt,
@@ -435,10 +437,14 @@ loop_function: function(data) {
       practice_passed: practicePassed
     });
 
-    // Repeat only if not passed and attempts remain.
+    console.log("Practice attempt:", practiceAttempt);
+    console.log("Responses:", responses);
+    console.log("Correct answers:", correctCount);
+    console.log("Practice passed:", practicePassed);
+
     return !practicePassed && practiceAttempt < 3;
 
-  }
+}
 
 };
 
