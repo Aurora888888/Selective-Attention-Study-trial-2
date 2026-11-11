@@ -49,17 +49,9 @@
       text-align: center;
     }
 
-    .gold {
-      color: gold;
-    }
-
-    .red {
-      color: red;
-    }
-
-    .gray {
-      color: gray;
-    }
+    .gold { color: gold; }
+    .red { color: red; }
+    .gray { color: gray; }
 
     .feedback-correct {
       position: fixed;
@@ -133,7 +125,6 @@
   <p id="id-error" style="color:red;"></p>
 
 </div>
-
 
 <script>
 
@@ -250,9 +241,6 @@ function responseReminders(
 // 5. GENERATE FLANKER STIMULI
 // ======================================
 
-// Practice: 2 x 4 combinations = 8 trials
-// Main task: 80 x 4 combinations = 320 trials
-
 function makeTrials(repetitions) {
 
   const trials = [];
@@ -337,7 +325,7 @@ function responseTrial(trial, phase, number) {
 
       phase: phase,
 
-      trial_type: "response",
+      task_trial_type: "response",
 
       trial_number: number,
 
@@ -346,16 +334,8 @@ function responseTrial(trial, phase, number) {
 
       congruency: trial.congruency,
 
-      // Inquisit codes:
-      // 1 = congruent
-      // 2 = incongruent
-
       inquisit_congruence:
         trial.congruency === "congruent" ? 1 : 2,
-
-      // Inquisit codes:
-      // 1 = right
-      // 2 = left
 
       inquisit_selecttarget:
         trial.target_direction === "right" ? 1 : 2,
@@ -372,9 +352,6 @@ function responseTrial(trial, phase, number) {
         data.response === data.correct_key ? 1 : 0;
 
       data.response_key = data.response;
-
-      // Save the response directly.
-      // Feedback will use this variable instead of searching jsPsych data.
 
       if (phase === "practice") {
 
@@ -438,7 +415,7 @@ function instructionDemoTrial(trial, prompt) {
 
       phase: "instruction",
 
-      trial_type: "demonstration",
+      task_trial_type: "demonstration",
 
       congruency: trial.congruency,
 
@@ -487,7 +464,7 @@ function fixationTrial(phase) {
 
       phase: phase,
 
-      trial_type: "fixation"
+      task_trial_type: "fixation"
 
     }
 
@@ -511,7 +488,7 @@ function highlightTrial(phase) {
       const last = jsPsych.data.get()
         .filter({
           phase: phase,
-          trial_type: "response"
+          task_trial_type: "response"
         })
         .last(1)
         .values()[0];
@@ -538,7 +515,7 @@ function highlightTrial(phase) {
 
       phase: phase,
 
-      trial_type: "response_highlight"
+      task_trial_type: "response_highlight"
 
     }
 
@@ -569,7 +546,7 @@ function blankTrial(phase) {
 
       phase: phase,
 
-      trial_type: "inter_trial_interval"
+      task_trial_type: "inter_trial_interval"
 
     }
 
@@ -581,15 +558,6 @@ function blankTrial(phase) {
 // ======================================
 // 11. PRACTICE FEEDBACK
 // ======================================
-
-// Correct:
-// Green "Correct!" for 1000 ms.
-//
-// Incorrect:
-// Red circle.
-// Correct direction displayed in red.
-// Correct response reminder displayed in red.
-// Wait for the correct key.
 
 function practiceFeedbackTrial(trial) {
 
@@ -609,93 +577,36 @@ function practiceFeedbackTrial(trial) {
 
       phase: "practice",
 
-      trial_type: "practice_feedback"
+      task_trial_type: "practice_feedback"
 
     },
 
-on_start: function(feedbackTrial) {
+    on_start: function(feedbackTrial) {
 
-  // The trial immediately before the feedback screen is
-  // the response-highlight trial.
-  // The trial before that is the participant's response.
+      const responseData = lastPracticeResponse;
 
-  const previousTrials = jsPsych.data.get()
-    .last(2)
-    .values();
+      console.log("Practice response:", responseData);
 
-  const responseData = previousTrials.length === 2
-    ? previousTrials[0]
-    : null;
+      if (!responseData) {
 
-  console.log("Previous two trials:", previousTrials);
-  console.log("Retrieved practice response:", responseData);
+        console.error("Practice response was not saved.");
 
-  if (
-    !responseData ||
-    responseData.phase !== "practice" ||
-    responseData.trial_type !== "response"
-  ) {
+        feedbackTrial.stimulus = `
+          <p style="color:red;">
+            Response retrieval error.
+          </p>
+        `;
 
-    console.error("Practice response retrieval failed.");
+        feedbackTrial.choices = "NO_KEYS";
+        feedbackTrial.trial_duration = 1000;
 
-    feedbackTrial.stimulus = `
-      <p style="color:red;">
-        Response retrieval error. Please contact the researcher.
-      </p>
-    `;
+        return;
 
-    feedbackTrial.choices = "NO_KEYS";
-    feedbackTrial.trial_duration = 1000;
+      }
 
-    return;
-  }
-
-  const isCorrect =
-    responseData.response === responseData.correct_key;
-
-  if (isCorrect) {
-
-    feedbackTrial.stimulus = `
-      <div class="feedback-correct">
-        Correct!
-      </div>
-    `;
-
-    feedbackTrial.choices = "NO_KEYS";
-    feedbackTrial.trial_duration = 1000;
-
-  } else {
-
-    const directionText =
-      trial.target_direction === "left"
-        ? "The CENTER arrow points to the LEFT"
-        : "The CENTER arrow points to the RIGHT";
-
-    const reminders =
-      trial.target_direction === "left"
-        ? responseReminders("red", "gray")
-        : responseReminders("gray", "red");
-
-    feedbackTrial.stimulus = `
-      <div class="red-circle"></div>
-
-      <div class="direction-feedback">
-        ${directionText}
-      </div>
-
-      ${reminders}
-    `;
-
-    feedbackTrial.choices = [trial.correct_key];
-    feedbackTrial.trial_duration = null;
-  }
-}
-
-      // ----------------------------------
       // CORRECT RESPONSE
-      // ----------------------------------
 
-      if (lastPracticeResponse.correct === 1) {
+      if (responseData.correct === 1) {
 
         feedbackTrial.stimulus = `
 
@@ -711,45 +622,31 @@ on_start: function(feedbackTrial) {
 
       }
 
-
-      // ----------------------------------
       // INCORRECT RESPONSE
-      // ----------------------------------
 
       else {
 
         const directionText =
           trial.target_direction === "left"
-
             ? "The CENTER arrow points to the LEFT"
-
             : "The CENTER arrow points to the RIGHT";
-
 
         const reminders =
           trial.target_direction === "left"
-
             ? responseReminders("red", "gray")
-
             : responseReminders("gray", "red");
-
 
         feedbackTrial.stimulus = `
 
           <div class="red-circle"></div>
 
           <div class="direction-feedback">
-
             ${directionText}
-
           </div>
 
           ${reminders}
 
         `;
-
-
-        // Wait indefinitely until the correct key is pressed.
 
         feedbackTrial.choices = [trial.correct_key];
 
@@ -860,29 +757,18 @@ function runTask() {
 
 
   timeline.push(instructionDemoTrial(
-
     demoRightCongruent,
-
     "Example 1: The CENTER arrow points RIGHT."
-
   ));
 
-
   timeline.push(instructionDemoTrial(
-
     demoLeftIncongruent,
-
     "Example 2: The CENTER arrow points LEFT. Ignore the surrounding arrows."
-
   ));
 
-
   timeline.push(instructionDemoTrial(
-
     demoRightIncongruent,
-
     "Example 3: The CENTER arrow points RIGHT. Ignore the surrounding arrows."
-
   ));
 
 
@@ -952,7 +838,7 @@ function runTask() {
 
       phase: "practice",
 
-      trial_type: "get_ready"
+      task_trial_type: "get_ready"
 
     }
 
@@ -971,35 +857,21 @@ function runTask() {
 
   practiceTrials.forEach((trial, index) => {
 
-    // Fixation
-
     practiceTimeline.push(
       fixationTrial("practice")
     );
-
-
-    // Response
 
     practiceTimeline.push(
       responseTrial(trial, "practice", index + 1)
     );
 
-
-    // Highlight selected response key
-
     practiceTimeline.push(
       highlightTrial("practice")
     );
 
-
-    // Feedback after every response
-
     practiceTimeline.push(
       practiceFeedbackTrial(trial)
     );
-
-
-    // Inter-trial interval
 
     practiceTimeline.push(
       blankTrial("practice")
@@ -1014,36 +886,20 @@ function runTask() {
 
     loop_function: function(data) {
 
-      // Count the completed attempt.
-
       practiceAttempt++;
-
-
-      // Use the responses stored directly in the variable.
 
       const responses = practiceResponses.slice(-8);
 
-
       const correctCount = responses.filter(
-
         row => row.correct === 1
-
       ).length;
 
-
       const accuracy = responses.length === 8
-
         ? correctCount / 8
-
         : 0;
 
-
-      // At least 6 out of 8 correct.
-
       practicePassed =
-
         responses.length === 8 && correctCount >= 6;
-
 
       practiceHistory.push({
 
@@ -1059,19 +915,11 @@ function runTask() {
 
       });
 
-
       console.log("Practice attempt:", practiceAttempt);
-
       console.log("Responses recorded:", responses.length);
-
       console.log("Correct answers:", correctCount);
-
       console.log("Practice accuracy:", accuracy);
-
       console.log("Practice passed:", practicePassed);
-
-
-      // Reset responses if another attempt is required.
 
       if (!practicePassed && practiceAttempt < 3) {
 
@@ -1080,10 +928,6 @@ function runTask() {
         lastPracticeResponse = null;
 
       }
-
-
-      // Repeat only if the participant has not passed
-      // and has attempts remaining.
 
       return !practicePassed && practiceAttempt < 3;
 
@@ -1169,7 +1013,7 @@ function runTask() {
 
         phase: "test",
 
-        trial_type: "get_ready"
+        task_trial_type: "get_ready"
 
       }
 
@@ -1255,7 +1099,7 @@ function runTask() {
         const testData = jsPsych.data.get()
           .filter({
             phase: "test",
-            trial_type: "response"
+            task_trial_type: "response"
           })
           .values();
 
@@ -1263,45 +1107,29 @@ function runTask() {
         function calculateCondition(condition) {
 
           const rows = testData.filter(
-
             row => row.congruency === condition
-
           );
-
 
           const correctRows = rows.filter(
-
             row => row.correct === 1 && row.rt !== null
-
           );
 
-
           const accuracy = rows.length > 0
-
             ? correctRows.length / rows.length
-
             : null;
-
 
           const meanRT = correctRows.length > 0
-
             ? correctRows.reduce(
-
                 (sum, row) => sum + row.rt, 0
-
               ) / correctRows.length
-
             : null;
 
-
           const IES =
-
-            accuracy !== null && accuracy > 0 && meanRT !== null
-
+            accuracy !== null &&
+            accuracy > 0 &&
+            meanRT !== null
               ? meanRT / accuracy
-
               : null;
-
 
           return {
 
@@ -1323,46 +1151,29 @@ function runTask() {
         const congruent =
           calculateCondition("congruent");
 
-
         const incongruent =
           calculateCondition("incongruent");
 
 
         const overallCorrectRows = testData.filter(
-
           row => row.correct === 1 && row.rt !== null
-
         );
 
-
         const overallAccuracy = testData.length > 0
-
           ? overallCorrectRows.length / testData.length
-
           : null;
-
 
         const overallMeanRT = overallCorrectRows.length > 0
-
           ? overallCorrectRows.reduce(
-
               (sum, row) => sum + row.rt, 0
-
             ) / overallCorrectRows.length
-
           : null;
 
-
         const overallIES =
-
           overallAccuracy !== null &&
-
           overallAccuracy > 0 &&
-
           overallMeanRT !== null
-
             ? overallMeanRT / overallAccuracy
-
             : null;
 
 
@@ -1370,7 +1181,7 @@ function runTask() {
 
           phase: "summary",
 
-          trial_type: "summary",
+          task_trial_type: "summary",
 
           subject_id: subject_id,
 
@@ -1409,6 +1220,12 @@ function runTask() {
           incongruent_IES: incongruent.IES
 
         });
+
+
+        console.log("Test response rows:", testData.length);
+        console.log("Congruent summary:", congruent);
+        console.log("Incongruent summary:", incongruent);
+        console.log("Overall IES:", overallIES);
 
       }
 
