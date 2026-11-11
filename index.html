@@ -42,7 +42,6 @@
       display: flex;
       justify-content: space-around;
       font-size: 18px;
-      color: gray;
     }
 
     .response-reminder {
@@ -50,15 +49,15 @@
       text-align: center;
     }
 
-    .response-reminder.gold {
+    .gold {
       color: gold;
     }
 
-    .response-reminder.red {
+    .red {
       color: red;
     }
 
-    .response-reminder.gray {
+    .gray {
       color: gray;
     }
 
@@ -73,22 +72,11 @@
       font-weight: bold;
     }
 
-    .feedback-error {
-      position: fixed;
-      top: 80%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: red;
-      font-family: Arial, sans-serif;
-      font-size: 5vh;
-      font-weight: bold;
-    }
-
     .red-circle {
       width: 15vh;
       height: 15vh;
-      border-radius: 50%;
       border: 5px solid red;
+      border-radius: 50%;
       position: fixed;
       top: 50%;
       left: 50%;
@@ -111,6 +99,7 @@
       margin: auto;
       max-width: 600px;
       line-height: 1.7;
+      text-align: center;
     }
 
     .participant-form input {
@@ -126,16 +115,20 @@
 
 <div id="participant-entry" class="participant-form">
   <h2>Selective Attention Study</h2>
+
   <p>Please enter your Participant ID before beginning the experiment.</p>
-  <p>
-    <input
-      type="text"
-      id="participant-id"
-      placeholder="Enter Participant ID"
-      autocomplete="off"
-    >
-  </p>
+
+  <input
+    type="text"
+    id="participant-id"
+    placeholder="Enter Participant ID"
+    autocomplete="off"
+  >
+
+  <br>
+
   <button id="start-experiment">Continue</button>
+
   <p id="id-error" style="color:red;"></p>
 </div>
 
@@ -148,41 +141,46 @@
 const EXPERIMENT_ID = "B19EGnjvuEar";
 
 let subject_id = "";
+
 let practiceAttempt = 0;
 let practicePassed = false;
+
 const practiceHistory = [];
 
 let jsPsych;
+
 
 // ======================================
 // 2. PARTICIPANT ID ENTRY
 // ======================================
 
-document.getElementById("start-experiment").addEventListener("click", function() {
+document.getElementById("start-experiment")
+  .addEventListener("click", function() {
 
-  const enteredID = document
-    .getElementById("participant-id")
-    .value
-    .trim();
+    const enteredID = document
+      .getElementById("participant-id")
+      .value
+      .trim();
 
-  if (!enteredID) {
-    document.getElementById("id-error").textContent =
-      "Please enter your Participant ID before continuing.";
-    return;
-  }
+    if (!enteredID) {
+      document.getElementById("id-error").textContent =
+        "Please enter your Participant ID before continuing.";
+      return;
+    }
 
-  subject_id = enteredID.replace(/[^a-zA-Z0-9_-]/g, "_");
+    subject_id = enteredID.replace(/[^a-zA-Z0-9_-]/g, "_");
 
-  if (!subject_id) {
-    document.getElementById("id-error").textContent =
-      "Please enter a valid Participant ID.";
-    return;
-  }
+    if (!subject_id) {
+      document.getElementById("id-error").textContent =
+        "Please enter a valid Participant ID.";
+      return;
+    }
 
-  document.getElementById("participant-entry").style.display = "none";
+    document.getElementById("participant-entry").style.display = "none";
 
-  startExperiment();
-});
+    startExperiment();
+  });
+
 
 // ======================================
 // 3. INITIALIZE jsPsych AND DATAPIPE
@@ -191,19 +189,27 @@ document.getElementById("start-experiment").addEventListener("click", function()
 function startExperiment() {
 
   jsPsych = initJsPsych({
+
     extensions: [
       {
         type: jsPsychExtensionPipe,
+
         params: {
           experiment_id: EXPERIMENT_ID,
-          filename: `${subject_id}.csv`
+          filename: () => `${subject_id}.csv`
         }
       }
     ]
   });
 
+  // Add participant ID to every recorded trial.
+  jsPsych.data.addProperties({
+    subject_id: subject_id
+  });
+
   runTask();
 }
+
 
 // ======================================
 // 4. RESPONSE REMINDERS
@@ -213,6 +219,7 @@ function responseReminders(leftClass = "gray", rightClass = "gray") {
 
   return `
     <div class="response-reminders">
+
       <div class="response-reminder ${leftClass}">
         Press 'Q' if CENTER arrow points LEFT
       </div>
@@ -220,9 +227,11 @@ function responseReminders(leftClass = "gray", rightClass = "gray") {
       <div class="response-reminder ${rightClass}">
         Press 'P' if CENTER arrow points RIGHT
       </div>
+
     </div>
   `;
 }
+
 
 // ======================================
 // 5. GENERATE FLANKER STIMULI
@@ -260,9 +269,13 @@ function makeTrials(repetitions) {
         flankerDirection === "left" ? "&lt;" : "&gt;";
 
       trials.push({
+
         congruency: condition.congruency,
+
         target_direction: targetDirection,
-        correct_key: targetDirection === "left" ? "q" : "p",
+
+        correct_key:
+          targetDirection === "left" ? "q" : "p",
 
         stimulus:
           `<div class="arrows">${flankerArrow} ${flankerArrow} ${targetArrow} ${flankerArrow} ${flankerArrow}</div>`
@@ -273,14 +286,15 @@ function makeTrials(repetitions) {
   return jsPsych.randomization.shuffle(trials);
 }
 
+
 // ======================================
 // 6. CREATE A RESPONSE TRIAL
 // ======================================
 
-
 function responseTrial(trial, phase, number) {
 
   return {
+
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
@@ -289,27 +303,33 @@ function responseTrial(trial, phase, number) {
     `,
 
     choices: ["q", "p"],
+
     trial_duration: 1750,
 
     data: {
-      subject_id: subject_id,
+
       phase: phase,
       trial_type: "response",
       trial_number: number,
 
-      block_number: phase === "practice"
-        ? practiceAttempt + 1
-        : 1,
+      block_number:
+        phase === "practice" ? practiceAttempt + 1 : 1,
 
       congruency: trial.congruency,
 
+      // Inquisit codes:
+      // 1 = congruent, 2 = incongruent
+
       inquisit_congruence:
         trial.congruency === "congruent" ? 1 : 2,
+
+      // 1 = right, 2 = left
 
       inquisit_selecttarget:
         trial.target_direction === "right" ? 1 : 2,
 
       target_direction: trial.target_direction,
+
       correct_key: trial.correct_key
     },
 
@@ -322,6 +342,7 @@ function responseTrial(trial, phase, number) {
     }
   };
 }
+
 
 // ======================================
 // 7. INSTRUCTION DEMONSTRATIONS
@@ -338,31 +359,36 @@ function instructionDemoTrial(trial, prompt) {
         <p>${prompt}</p>
         ${trial.stimulus}
       </div>
+
       ${responseReminders()}
     `,
 
     choices: [trial.correct_key],
 
     data: {
-      subject_id: subject_id,
+
       phase: "instruction",
       trial_type: "demonstration",
+
       congruency: trial.congruency,
+
       target_direction: trial.target_direction
     },
 
     on_finish: function(data) {
+
       data.correct = 1;
       data.response_key = data.response;
     }
   };
 }
 
+
 // ======================================
 // 8. FIXATION TRIAL
 // ======================================
 
-function fixationTrial(phase = "practice") {
+function fixationTrial(phase) {
 
   return {
 
@@ -374,15 +400,17 @@ function fixationTrial(phase = "practice") {
     `,
 
     choices: "NO_KEYS",
+
     trial_duration: 1000,
 
     data: {
-      subject_id: subject_id,
+
       phase: phase,
       trial_type: "fixation"
     }
   };
 }
+
 
 // ======================================
 // 9. RESPONSE HIGHLIGHT
@@ -407,24 +435,27 @@ function highlightTrial(phase) {
       const response = last ? last.response : null;
 
       return responseReminders(
+
         response === "q" ? "gold" : "gray",
+
         response === "p" ? "gold" : "gray"
       );
     },
 
     choices: "NO_KEYS",
+
     trial_duration: 100,
 
     data: {
-      subject_id: subject_id,
       phase: phase,
       trial_type: "response_highlight"
     }
   };
 }
 
+
 // ======================================
-// 10. BLANK / ITI
+// 10. INTER-TRIAL INTERVAL
 // ======================================
 
 function blankTrial(phase) {
@@ -434,92 +465,156 @@ function blankTrial(phase) {
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: "",
+
     choices: "NO_KEYS",
+
     trial_duration: 500,
 
     data: {
-      subject_id: subject_id,
       phase: phase,
       trial_type: "inter_trial_interval"
     }
   };
 }
 
+
 // ======================================
 // 11. PRACTICE FEEDBACK
 // ======================================
 
-// Correct feedback:
+// One feedback trial follows every practice response.
+//
+// Correct:
 // Green "Correct!" for 1000 ms.
+//
+// Incorrect:
+// Red circle + correct direction in red.
+// Wait for the correct response key.
 
-function correctFeedbackTrial() {
+function practiceFeedbackTrial(trial) {
 
   return {
 
     type: jsPsychHtmlKeyboardResponse,
 
-    stimulus: `
-      <div class="feedback-correct">Correct!</div>
-    `,
+    stimulus: "",
 
     choices: "NO_KEYS",
+
     trial_duration: 1000,
 
     data: {
-      subject_id: subject_id,
+
       phase: "practice",
-      trial_type: "practice_correct_feedback"
+
+      trial_type: "practice_feedback",
+
+      target_direction: trial.target_direction
+    },
+
+    on_start: function(feedbackTrial) {
+
+      // Retrieve the immediately preceding practice response.
+
+      const lastResponse = jsPsych.data.get()
+        .filter({
+          phase: "practice",
+          trial_type: "response"
+        })
+        .last(1)
+        .values()[0];
+
+      console.log("Feedback checking response:", lastResponse);
+
+      if (!lastResponse) {
+
+        console.error("Practice response could not be found.");
+
+        feedbackTrial.stimulus = `
+          <p style="color:red;">
+            Response data could not be found.
+          </p>
+        `;
+
+        feedbackTrial.choices = "NO_KEYS";
+        feedbackTrial.trial_duration = 1000;
+
+        return;
+      }
+
+
+      // ----------------------------------
+      // CORRECT RESPONSE
+      // ----------------------------------
+
+      if (lastResponse.correct === 1) {
+
+        feedbackTrial.stimulus = `
+          <div class="feedback-correct">
+            Correct!
+          </div>
+        `;
+
+        feedbackTrial.choices = "NO_KEYS";
+
+        feedbackTrial.trial_duration = 1000;
+
+      }
+
+
+      // ----------------------------------
+      // INCORRECT RESPONSE
+      // ----------------------------------
+
+      else {
+
+        const directionText =
+          trial.target_direction === "left"
+
+            ? "The CENTER arrow points to the LEFT"
+
+            : "The CENTER arrow points to the RIGHT";
+
+
+        const reminders =
+          trial.target_direction === "left"
+
+            ? responseReminders("red", "gray")
+
+            : responseReminders("gray", "red");
+
+
+        feedbackTrial.stimulus = `
+
+          <div class="red-circle"></div>
+
+          <div class="direction-feedback">
+            ${directionText}
+          </div>
+
+          ${reminders}
+
+        `;
+
+        // Wait indefinitely for the correct key.
+
+        feedbackTrial.choices = [trial.correct_key];
+
+        feedbackTrial.trial_duration = null;
+      }
     }
   };
 }
 
-// Incorrect feedback:
-// Red circle + correct direction in red.
-// The correct key must be pressed to continue.
-
-function incorrectFeedbackTrial(trial) {
-
-  const directionText =
-    trial.target_direction === "left"
-      ? "The CENTER arrow points to the LEFT"
-      : "The CENTER arrow points to the RIGHT";
-
-  return {
-
-    type: jsPsychHtmlKeyboardResponse,
-
-    stimulus: `
-      <div class="red-circle"></div>
-
-      <div class="direction-feedback">
-        ${directionText}
-      </div>
-
-      <div class="feedback-error"></div>
-
-      ${trial.target_direction === "left"
-        ? responseReminders("red", "gray")
-        : responseReminders("gray", "red")}
-    `,
-
-    choices: [trial.correct_key],
-
-    data: {
-      subject_id: subject_id,
-      phase: "practice",
-      trial_type: "practice_error_correction",
-      correct_key: trial.correct_key
-    }
-  };
-}
 
 // ======================================
-// 12. START EXPERIMENT
+// 12. RUN TASK
 // ======================================
 
 function runTask() {
 
   const timeline = [];
+
 
 // ======================================
 // INTRODUCTION
@@ -530,10 +625,12 @@ function runTask() {
     type: jsPsychHtmlButtonResponse,
 
     stimulus: `
+
       <div class="instructions">
+
         <h2>Arrow Flanker Task</h2>
 
-        <p>You will see five arrows on the screen.</p>
+        <p>You will see five arrows in the middle of the screen.</p>
 
         <p>Your task is to identify the direction of the
         <b>CENTER arrow</b>, while ignoring the other four arrows.</p>
@@ -543,54 +640,86 @@ function runTask() {
         <p>Press <b>P</b> if the CENTER arrow points RIGHT.</p>
 
         <p>Sometimes all five arrows point in the same direction.
-        Sometimes the CENTER arrow points in the opposite direction.</p>
+        Sometimes the four outer arrows point in the opposite
+        direction from the CENTER arrow.</p>
 
         <p>Respond as quickly and accurately as possible.</p>
+
+        <p>Keep your eyes on the screen and use a keyboard.</p>
+
       </div>
     `,
 
     choices: ["Continue"]
   });
 
+
 // ======================================
 // INSTRUCTION DEMONSTRATIONS
 // ======================================
 
   const demoRightCongruent = {
+
     congruency: "congruent",
+
     target_direction: "right",
+
     correct_key: "p",
-    stimulus: `<div class="arrows">&gt; &gt; &gt; &gt; &gt;</div>`
+
+    stimulus:
+      `<div class="arrows">&gt; &gt; &gt; &gt; &gt;</div>`
   };
+
 
   const demoLeftIncongruent = {
+
     congruency: "incongruent",
+
     target_direction: "left",
+
     correct_key: "q",
-    stimulus: `<div class="arrows">&gt; &gt; &lt; &gt; &gt;</div>`
+
+    stimulus:
+      `<div class="arrows">&gt; &gt; &lt; &gt; &gt;</div>`
   };
+
 
   const demoRightIncongruent = {
+
     congruency: "incongruent",
+
     target_direction: "right",
+
     correct_key: "p",
-    stimulus: `<div class="arrows">&lt; &lt; &gt; &lt; &lt;</div>`
+
+    stimulus:
+      `<div class="arrows">&lt; &lt; &gt; &lt; &lt;</div>`
   };
 
+
   timeline.push(instructionDemoTrial(
+
     demoRightCongruent,
-    "Example 1: The CENTER arrow points to the RIGHT."
+
+    "Example 1: The CENTER arrow points RIGHT."
   ));
 
+
   timeline.push(instructionDemoTrial(
+
     demoLeftIncongruent,
-    "Example 2: The CENTER arrow points to the LEFT."
+
+    "Example 2: The CENTER arrow points LEFT. Ignore the surrounding arrows."
   ));
 
+
   timeline.push(instructionDemoTrial(
+
     demoRightIncongruent,
-    "Example 3: The CENTER arrow points to the RIGHT."
+
+    "Example 3: The CENTER arrow points RIGHT. Ignore the surrounding arrows."
   ));
+
 
 // ======================================
 // PRACTICE INSTRUCTIONS
@@ -601,7 +730,9 @@ function runTask() {
     type: jsPsychHtmlButtonResponse,
 
     stimulus: `
+
       <div class="instructions">
+
         <h2>Practice Session</h2>
 
         <p>You will now complete a short practice session.</p>
@@ -616,11 +747,13 @@ function runTask() {
         <p>A fixation cross (+) will appear before the arrows.</p>
 
         <p>Try to be as fast as possible while making as few errors as possible.</p>
+
       </div>
     `,
 
     choices: ["Begin Practice"]
   });
+
 
 // ======================================
 // PRACTICE GET READY
@@ -631,128 +764,153 @@ function runTask() {
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
+
       <h2>Get Ready</h2>
-      <p>Put your index fingers on the Q and P keys.</p>
+
+      <p>Place your fingers on Q and P.</p>
+
+      <p>The practice session will begin shortly.</p>
+
       ${responseReminders()}
+
     `,
 
     choices: "NO_KEYS",
+
     trial_duration: 3000,
 
     data: {
-      subject_id: subject_id,
       phase: "practice",
       trial_type: "get_ready"
     }
   });
 
+
 // ======================================
 // PRACTICE BLOCK
+// 8 TRIALS PER ATTEMPT
 // ======================================
 
   const practiceTrials = makeTrials(2);
+
   const practiceTimeline = [];
+
 
   practiceTrials.forEach((trial, index) => {
 
-    practiceTimeline.push(fixationTrial("practice"));
+    // Fixation
+
+    practiceTimeline.push(
+      fixationTrial("practice")
+    );
+
+
+    // Response
 
     practiceTimeline.push(
       responseTrial(trial, "practice", index + 1)
     );
 
+
+    // Response key highlight
+
     practiceTimeline.push(
       highlightTrial("practice")
     );
 
-    // Correct feedback
 
-    practiceTimeline.push({
+    // Feedback after every response
 
-      timeline: [correctFeedbackTrial()],
+    practiceTimeline.push(
+      practiceFeedbackTrial(trial)
+    );
 
-      conditional_function: function() {
 
-        const lastResponse = jsPsych.data.get()
-          .filter({
-            phase: "practice",
-            trial_type: "response"
-          })
-          .last(1)
-          .values()[0];
+    // Inter-trial interval
 
-        return lastResponse && lastResponse.correct === 1;
-      }
-    });
+    practiceTimeline.push(
+      blankTrial("practice")
+    );
 
-    // Incorrect feedback
-
-    practiceTimeline.push({
-
-      timeline: [incorrectFeedbackTrial(trial)],
-
-      conditional_function: function() {
-
-        const lastResponse = jsPsych.data.get()
-          .filter({
-            phase: "practice",
-            trial_type: "response"
-          })
-          .last(1)
-          .values()[0];
-
-        return lastResponse && lastResponse.correct === 0;
-      }
-    });
-
-    practiceTimeline.push(blankTrial("practice"));
   });
+
 
   const practiceBlock = {
 
     timeline: practiceTimeline,
 
+    loop_function: function(data) {
 
-loop_function: function(data) {
+      practiceAttempt++;
 
-  practiceAttempt++;
 
-  const responses = jsPsych.data.get()
-    .filter({
-      phase: "practice",
-      trial_type: "response"
-    })
-    .last(8)
-    .values();
+      // Retrieve the eight most recent practice responses.
 
-  console.log("Practice responses:", responses);
+      const responses = jsPsych.data.get()
+        .filter({
+          phase: "practice",
+          trial_type: "response"
+        })
+        .last(8)
+        .values();
 
-  const correctCount = responses.filter(
-    row => row.correct === 1
-  ).length;
 
-  const accuracy = responses.length === 8
-    ? correctCount / 8
-    : 0;
+      console.log("Practice responses:", responses);
 
-  practicePassed =
-    responses.length === 8 && correctCount >= 6;
 
-  practiceHistory.push({
-    practice_attempt: practiceAttempt,
-    practice_correct: correctCount,
-    practice_total: responses.length,
-    practice_accuracy: accuracy,
-    practice_passed: practicePassed
-  });
+      const correctCount = responses.filter(
 
-  console.log("Practice attempt:", practiceAttempt);
-  console.log("Number of responses:", responses.length);
-  console.log("Correct answers:", correctCount);
-  console.log("Practice passed:", practicePassed);
+        row => row.correct === 1
 
-  return !practicePassed && practiceAttempt < 3;
-}
+      ).length;
+
+
+      const accuracy = responses.length === 8
+
+        ? correctCount / 8
+
+        : 0;
+
+
+      practicePassed =
+
+        responses.length === 8 && correctCount >= 6;
+
+
+      practiceHistory.push({
+
+        practice_attempt: practiceAttempt,
+
+        practice_correct: correctCount,
+
+        practice_total: responses.length,
+
+        practice_accuracy: accuracy,
+
+        practice_passed: practicePassed
+      });
+
+
+      console.log("Practice attempt:", practiceAttempt);
+
+      console.log("Number of responses:", responses.length);
+
+      console.log("Correct answers:", correctCount);
+
+      console.log("Practice accuracy:", accuracy);
+
+      console.log("Practice passed:", practicePassed);
+
+
+      // Repeat if not passed and fewer than 3 attempts.
+
+      return !practicePassed && practiceAttempt < 3;
+    }
+  };
+
+
+  timeline.push(practiceBlock);
+
 
 // ======================================
 // TEST INSTRUCTIONS
@@ -765,7 +923,9 @@ loop_function: function(data) {
       type: jsPsychHtmlButtonResponse,
 
       stimulus: `
+
         <div class="instructions">
+
           <h2>Actual Test</h2>
 
           <p>You are now ready to begin the actual test.</p>
@@ -778,6 +938,7 @@ loop_function: function(data) {
           not the surrounding arrows.</p>
 
           <p>Try to be as fast as possible while making as few errors as possible.</p>
+
         </div>
       `,
 
@@ -786,9 +947,11 @@ loop_function: function(data) {
     }],
 
     conditional_function: function() {
+
       return practicePassed;
     }
   });
+
 
 // ======================================
 // TEST GET READY
@@ -801,36 +964,47 @@ loop_function: function(data) {
       type: jsPsychHtmlKeyboardResponse,
 
       stimulus: `
+
         <h2>Get Ready</h2>
+
         <p>The actual test will begin shortly.</p>
+
         ${responseReminders()}
+
       `,
 
       choices: "NO_KEYS",
+
       trial_duration: 3000,
 
       data: {
-        subject_id: subject_id,
         phase: "test",
         trial_type: "get_ready"
       }
     }],
 
     conditional_function: function() {
+
       return practicePassed;
     }
   });
 
+
 // ======================================
-// MAIN TEST: 320 TRIALS
+// MAIN TEST
+// 320 TRIALS
 // ======================================
 
   const testTimeline = [];
+
   const testTrials = makeTrials(80);
+
 
   testTrials.forEach((trial, index) => {
 
-    testTimeline.push(fixationTrial("test"));
+    testTimeline.push(
+      fixationTrial("test")
+    );
 
     testTimeline.push(
       responseTrial(trial, "test", index + 1)
@@ -843,16 +1017,20 @@ loop_function: function(data) {
     testTimeline.push(
       blankTrial("test")
     );
+
   });
+
 
   timeline.push({
 
     timeline: testTimeline,
 
     conditional_function: function() {
+
       return practicePassed;
     }
   });
+
 
 // ======================================
 // SUCCESS END SCREEN AND SUMMARY
@@ -865,14 +1043,19 @@ loop_function: function(data) {
       type: jsPsychHtmlButtonResponse,
 
       stimulus: `
+
         <h2>Thank You!</h2>
+
         <p>You have completed the Arrow Flanker Task.</p>
+
         <p>Please click Finish to submit your responses.</p>
+
       `,
 
       choices: ["Finish"],
 
       on_finish: function(data) {
+
 
         const testData = jsPsych.data.get()
           .filter({
@@ -881,102 +1064,163 @@ loop_function: function(data) {
           })
           .values();
 
+
         function calculateCondition(condition) {
 
           const rows = testData.filter(
+
             row => row.congruency === condition
+
           );
+
 
           const correctRows = rows.filter(
+
             row => row.correct === 1 && row.rt !== null
+
           );
 
+
           const accuracy = rows.length > 0
+
             ? correctRows.length / rows.length
+
             : null;
+
 
           const meanRT = correctRows.length > 0
+
             ? correctRows.reduce(
+
                 (sum, row) => sum + row.rt, 0
+
               ) / correctRows.length
+
             : null;
 
+
           const IES =
+
             accuracy !== null && accuracy > 0 && meanRT !== null
+
               ? meanRT / accuracy
+
               : null;
 
+
           return {
+
             total_trials: rows.length,
+
             correct_trials: correctRows.length,
+
             accuracy: accuracy,
+
             mean_correct_RT: meanRT,
+
             IES: IES
           };
         }
 
+
         const congruent =
           calculateCondition("congruent");
+
 
         const incongruent =
           calculateCondition("incongruent");
 
+
         const overallCorrectRows = testData.filter(
+
           row => row.correct === 1 && row.rt !== null
+
         );
 
+
         const overallAccuracy = testData.length > 0
+
           ? overallCorrectRows.length / testData.length
+
           : null;
+
 
         const overallMeanRT = overallCorrectRows.length > 0
+
           ? overallCorrectRows.reduce(
+
               (sum, row) => sum + row.rt, 0
+
             ) / overallCorrectRows.length
+
           : null;
 
+
         const overallIES =
+
           overallAccuracy !== null &&
+
           overallAccuracy > 0 &&
+
           overallMeanRT !== null
+
             ? overallMeanRT / overallAccuracy
+
             : null;
+
 
         Object.assign(data, {
 
           phase: "summary",
+
           trial_type: "summary",
+
           subject_id: subject_id,
 
           practice_attempts: practiceAttempt,
+
           practice_passed: practicePassed,
+
           practice_history: JSON.stringify(practiceHistory),
 
           total_test_trials: testData.length,
 
           overall_accuracy: overallAccuracy,
+
           overall_mean_correct_RT: overallMeanRT,
+
           overall_IES: overallIES,
 
           congruent_total_trials: congruent.total_trials,
+
           congruent_correct_trials: congruent.correct_trials,
+
           congruent_accuracy: congruent.accuracy,
+
           congruent_mean_correct_RT: congruent.mean_correct_RT,
+
           congruent_IES: congruent.IES,
 
           incongruent_total_trials: incongruent.total_trials,
+
           incongruent_correct_trials: incongruent.correct_trials,
+
           incongruent_accuracy: incongruent.accuracy,
+
           incongruent_mean_correct_RT: incongruent.mean_correct_RT,
+
           incongruent_IES: incongruent.IES
+
         });
       }
     }],
 
     conditional_function: function() {
+
       return practicePassed;
     }
   });
+
 
 // ======================================
 // END SCREEN IF PRACTICE NOT PASSED
@@ -989,26 +1233,34 @@ loop_function: function(data) {
       type: jsPsychHtmlButtonResponse,
 
       stimulus: `
+
         <h2>Thank You</h2>
-        <p>You did not meet the practice requirement.</p>
+
+        <p>The practice requirement was not met.</p>
+
         <p>Your task session has ended.</p>
+
       `,
 
       choices: ["Finish"]
     }],
 
     conditional_function: function() {
+
       return !practicePassed;
     }
   });
+
 
 // ======================================
 // RUN EXPERIMENT
 // ======================================
 
   jsPsych.run(timeline);
+
 }
 
 </script>
+
 </body>
 </html>
