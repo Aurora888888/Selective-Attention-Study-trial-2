@@ -114,6 +114,7 @@
 <body>
 
 <div id="participant-entry" class="participant-form">
+
   <h2>Selective Attention Study</h2>
 
   <p>Please enter your Participant ID before beginning the experiment.</p>
@@ -130,7 +131,9 @@
   <button id="start-experiment">Continue</button>
 
   <p id="id-error" style="color:red;"></p>
+
 </div>
+
 
 <script>
 
@@ -144,6 +147,9 @@ let subject_id = "";
 
 let practiceAttempt = 0;
 let practicePassed = false;
+
+let practiceResponses = [];
+let lastPracticeResponse = null;
 
 const practiceHistory = [];
 
@@ -179,6 +185,7 @@ document.getElementById("start-experiment")
     document.getElementById("participant-entry").style.display = "none";
 
     startExperiment();
+
   });
 
 
@@ -200,14 +207,15 @@ function startExperiment() {
         }
       }
     ]
+
   });
 
-  // Add participant ID to every recorded trial.
   jsPsych.data.addProperties({
     subject_id: subject_id
   });
 
   runTask();
+
 }
 
 
@@ -215,9 +223,13 @@ function startExperiment() {
 // 4. RESPONSE REMINDERS
 // ======================================
 
-function responseReminders(leftClass = "gray", rightClass = "gray") {
+function responseReminders(
+  leftClass = "gray",
+  rightClass = "gray"
+) {
 
   return `
+
     <div class="response-reminders">
 
       <div class="response-reminder ${leftClass}">
@@ -229,6 +241,7 @@ function responseReminders(leftClass = "gray", rightClass = "gray") {
       </div>
 
     </div>
+
   `;
 }
 
@@ -245,10 +258,15 @@ function makeTrials(repetitions) {
   const trials = [];
 
   const conditions = [
+
     { congruency: "congruent", target: "left" },
+
     { congruency: "congruent", target: "right" },
+
     { congruency: "incongruent", target: "left" },
+
     { congruency: "incongruent", target: "right" }
+
   ];
 
   conditions.forEach(condition => {
@@ -279,11 +297,15 @@ function makeTrials(repetitions) {
 
         stimulus:
           `<div class="arrows">${flankerArrow} ${flankerArrow} ${targetArrow} ${flankerArrow} ${flankerArrow}</div>`
+
       });
+
     }
+
   });
 
   return jsPsych.randomization.shuffle(trials);
+
 }
 
 
@@ -298,8 +320,11 @@ function responseTrial(trial, phase, number) {
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
+
       ${trial.stimulus}
+
       ${responseReminders()}
+
     `,
 
     choices: ["q", "p"],
@@ -308,8 +333,12 @@ function responseTrial(trial, phase, number) {
 
     data: {
 
+      subject_id: subject_id,
+
       phase: phase,
+
       trial_type: "response",
+
       trial_number: number,
 
       block_number:
@@ -318,12 +347,15 @@ function responseTrial(trial, phase, number) {
       congruency: trial.congruency,
 
       // Inquisit codes:
-      // 1 = congruent, 2 = incongruent
+      // 1 = congruent
+      // 2 = incongruent
 
       inquisit_congruence:
         trial.congruency === "congruent" ? 1 : 2,
 
-      // 1 = right, 2 = left
+      // Inquisit codes:
+      // 1 = right
+      // 2 = left
 
       inquisit_selecttarget:
         trial.target_direction === "right" ? 1 : 2,
@@ -331,6 +363,7 @@ function responseTrial(trial, phase, number) {
       target_direction: trial.target_direction,
 
       correct_key: trial.correct_key
+
     },
 
     on_finish: function(data) {
@@ -339,8 +372,37 @@ function responseTrial(trial, phase, number) {
         data.response === data.correct_key ? 1 : 0;
 
       data.response_key = data.response;
+
+      // Save the response directly.
+      // Feedback will use this variable instead of searching jsPsych data.
+
+      if (phase === "practice") {
+
+        lastPracticeResponse = {
+
+          response: data.response,
+
+          correct: data.correct,
+
+          correct_key: trial.correct_key,
+
+          target_direction: trial.target_direction
+
+        };
+
+        practiceResponses.push(lastPracticeResponse);
+
+        console.log(
+          "Practice response saved:",
+          lastPracticeResponse
+        );
+
+      }
+
     }
+
   };
+
 }
 
 
@@ -355,32 +417,45 @@ function instructionDemoTrial(trial, prompt) {
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
+
       <div class="instructions">
+
         <p>${prompt}</p>
+
         ${trial.stimulus}
+
       </div>
 
       ${responseReminders()}
+
     `,
 
     choices: [trial.correct_key],
 
     data: {
 
+      subject_id: subject_id,
+
       phase: "instruction",
+
       trial_type: "demonstration",
 
       congruency: trial.congruency,
 
       target_direction: trial.target_direction
+
     },
 
     on_finish: function(data) {
 
       data.correct = 1;
+
       data.response_key = data.response;
+
     }
+
   };
+
 }
 
 
@@ -395,8 +470,11 @@ function fixationTrial(phase) {
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
+
       <div style="font-size:65px;font-weight:bold;">+</div>
+
       ${responseReminders()}
+
     `,
 
     choices: "NO_KEYS",
@@ -405,10 +483,16 @@ function fixationTrial(phase) {
 
     data: {
 
+      subject_id: subject_id,
+
       phase: phase,
+
       trial_type: "fixation"
+
     }
+
   };
+
 }
 
 
@@ -439,7 +523,9 @@ function highlightTrial(phase) {
         response === "q" ? "gold" : "gray",
 
         response === "p" ? "gold" : "gray"
+
       );
+
     },
 
     choices: "NO_KEYS",
@@ -447,10 +533,17 @@ function highlightTrial(phase) {
     trial_duration: 100,
 
     data: {
+
+      subject_id: subject_id,
+
       phase: phase,
+
       trial_type: "response_highlight"
+
     }
+
   };
+
 }
 
 
@@ -471,10 +564,17 @@ function blankTrial(phase) {
     trial_duration: 500,
 
     data: {
+
+      subject_id: subject_id,
+
       phase: phase,
+
       trial_type: "inter_trial_interval"
+
     }
+
   };
+
 }
 
 
@@ -482,14 +582,14 @@ function blankTrial(phase) {
 // 11. PRACTICE FEEDBACK
 // ======================================
 
-// One feedback trial follows every practice response.
-//
 // Correct:
 // Green "Correct!" for 1000 ms.
 //
 // Incorrect:
-// Red circle + correct direction in red.
-// Wait for the correct response key.
+// Red circle.
+// Correct direction displayed in red.
+// Correct response reminder displayed in red.
+// Wait for the correct key.
 
 function practiceFeedbackTrial(trial) {
 
@@ -505,41 +605,40 @@ function practiceFeedbackTrial(trial) {
 
     data: {
 
+      subject_id: subject_id,
+
       phase: "practice",
 
-      trial_type: "practice_feedback",
+      trial_type: "practice_feedback"
 
-      target_direction: trial.target_direction
     },
 
     on_start: function(feedbackTrial) {
 
-      // Retrieve the immediately preceding practice response.
+      console.log(
+        "Response received by feedback:",
+        lastPracticeResponse
+      );
 
-      const lastResponse = jsPsych.data.get()
-        .filter({
-          phase: "practice",
-          trial_type: "response"
-        })
-        .last(1)
-        .values()[0];
 
-      console.log("Feedback checking response:", lastResponse);
+      // Check whether the response was saved.
 
-      if (!lastResponse) {
+      if (!lastPracticeResponse) {
 
-        console.error("Practice response could not be found.");
+        console.error("No practice response was saved.");
 
         feedbackTrial.stimulus = `
           <p style="color:red;">
-            Response data could not be found.
+            Practice response could not be retrieved.
           </p>
         `;
 
         feedbackTrial.choices = "NO_KEYS";
+
         feedbackTrial.trial_duration = 1000;
 
         return;
+
       }
 
 
@@ -547,12 +646,14 @@ function practiceFeedbackTrial(trial) {
       // CORRECT RESPONSE
       // ----------------------------------
 
-      if (lastResponse.correct === 1) {
+      if (lastPracticeResponse.correct === 1) {
 
         feedbackTrial.stimulus = `
+
           <div class="feedback-correct">
             Correct!
           </div>
+
         `;
 
         feedbackTrial.choices = "NO_KEYS";
@@ -589,21 +690,28 @@ function practiceFeedbackTrial(trial) {
           <div class="red-circle"></div>
 
           <div class="direction-feedback">
+
             ${directionText}
+
           </div>
 
           ${reminders}
 
         `;
 
-        // Wait indefinitely for the correct key.
+
+        // Wait indefinitely until the correct key is pressed.
 
         feedbackTrial.choices = [trial.correct_key];
 
         feedbackTrial.trial_duration = null;
+
       }
+
     }
+
   };
+
 }
 
 
@@ -648,9 +756,11 @@ function runTask() {
         <p>Keep your eyes on the screen and use a keyboard.</p>
 
       </div>
+
     `,
 
     choices: ["Continue"]
+
   });
 
 
@@ -668,6 +778,7 @@ function runTask() {
 
     stimulus:
       `<div class="arrows">&gt; &gt; &gt; &gt; &gt;</div>`
+
   };
 
 
@@ -681,6 +792,7 @@ function runTask() {
 
     stimulus:
       `<div class="arrows">&gt; &gt; &lt; &gt; &gt;</div>`
+
   };
 
 
@@ -694,6 +806,7 @@ function runTask() {
 
     stimulus:
       `<div class="arrows">&lt; &lt; &gt; &lt; &lt;</div>`
+
   };
 
 
@@ -702,6 +815,7 @@ function runTask() {
     demoRightCongruent,
 
     "Example 1: The CENTER arrow points RIGHT."
+
   ));
 
 
@@ -710,6 +824,7 @@ function runTask() {
     demoLeftIncongruent,
 
     "Example 2: The CENTER arrow points LEFT. Ignore the surrounding arrows."
+
   ));
 
 
@@ -718,6 +833,7 @@ function runTask() {
     demoRightIncongruent,
 
     "Example 3: The CENTER arrow points RIGHT. Ignore the surrounding arrows."
+
   ));
 
 
@@ -749,9 +865,11 @@ function runTask() {
         <p>Try to be as fast as possible while making as few errors as possible.</p>
 
       </div>
+
     `,
 
     choices: ["Begin Practice"]
+
   });
 
 
@@ -780,9 +898,15 @@ function runTask() {
     trial_duration: 3000,
 
     data: {
+
+      subject_id: subject_id,
+
       phase: "practice",
+
       trial_type: "get_ready"
+
     }
+
   });
 
 
@@ -812,7 +936,7 @@ function runTask() {
     );
 
 
-    // Response key highlight
+    // Highlight selected response key
 
     practiceTimeline.push(
       highlightTrial("practice")
@@ -841,21 +965,14 @@ function runTask() {
 
     loop_function: function(data) {
 
+      // Count the completed attempt.
+
       practiceAttempt++;
 
 
-      // Retrieve the eight most recent practice responses.
+      // Use the responses stored directly in the variable.
 
-      const responses = jsPsych.data.get()
-        .filter({
-          phase: "practice",
-          trial_type: "response"
-        })
-        .last(8)
-        .values();
-
-
-      console.log("Practice responses:", responses);
+      const responses = practiceResponses.slice(-8);
 
 
       const correctCount = responses.filter(
@@ -871,6 +988,8 @@ function runTask() {
 
         : 0;
 
+
+      // At least 6 out of 8 correct.
 
       practicePassed =
 
@@ -888,12 +1007,13 @@ function runTask() {
         practice_accuracy: accuracy,
 
         practice_passed: practicePassed
+
       });
 
 
       console.log("Practice attempt:", practiceAttempt);
 
-      console.log("Number of responses:", responses.length);
+      console.log("Responses recorded:", responses.length);
 
       console.log("Correct answers:", correctCount);
 
@@ -902,10 +1022,24 @@ function runTask() {
       console.log("Practice passed:", practicePassed);
 
 
-      // Repeat if not passed and fewer than 3 attempts.
+      // Reset responses if another attempt is required.
+
+      if (!practicePassed && practiceAttempt < 3) {
+
+        practiceResponses = [];
+
+        lastPracticeResponse = null;
+
+      }
+
+
+      // Repeat only if the participant has not passed
+      // and has attempts remaining.
 
       return !practicePassed && practiceAttempt < 3;
+
     }
+
   };
 
 
@@ -940,6 +1074,7 @@ function runTask() {
           <p>Try to be as fast as possible while making as few errors as possible.</p>
 
         </div>
+
       `,
 
       choices: ["Start Test"]
@@ -949,7 +1084,9 @@ function runTask() {
     conditional_function: function() {
 
       return practicePassed;
+
     }
+
   });
 
 
@@ -978,15 +1115,23 @@ function runTask() {
       trial_duration: 3000,
 
       data: {
+
+        subject_id: subject_id,
+
         phase: "test",
+
         trial_type: "get_ready"
+
       }
+
     }],
 
     conditional_function: function() {
 
       return practicePassed;
+
     }
+
   });
 
 
@@ -1028,7 +1173,9 @@ function runTask() {
     conditional_function: function() {
 
       return practicePassed;
+
     }
+
   });
 
 
@@ -1055,7 +1202,6 @@ function runTask() {
       choices: ["Finish"],
 
       on_finish: function(data) {
-
 
         const testData = jsPsych.data.get()
           .filter({
@@ -1119,7 +1265,9 @@ function runTask() {
             mean_correct_RT: meanRT,
 
             IES: IES
+
           };
+
         }
 
 
@@ -1212,13 +1360,17 @@ function runTask() {
           incongruent_IES: incongruent.IES
 
         });
+
       }
+
     }],
 
     conditional_function: function() {
 
       return practicePassed;
+
     }
+
   });
 
 
@@ -1243,12 +1395,15 @@ function runTask() {
       `,
 
       choices: ["Finish"]
+
     }],
 
     conditional_function: function() {
 
       return !practicePassed;
+
     }
+
   });
 
 
