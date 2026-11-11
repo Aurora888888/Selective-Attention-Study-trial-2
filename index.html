@@ -613,34 +613,83 @@ function practiceFeedbackTrial(trial) {
 
     },
 
-    on_start: function(feedbackTrial) {
+on_start: function(feedbackTrial) {
 
-      console.log(
-        "Response received by feedback:",
-        lastPracticeResponse
-      );
+  // The trial immediately before the feedback screen is
+  // the response-highlight trial.
+  // The trial before that is the participant's response.
 
+  const previousTrials = jsPsych.data.get()
+    .last(2)
+    .values();
 
-      // Check whether the response was saved.
+  const responseData = previousTrials.length === 2
+    ? previousTrials[0]
+    : null;
 
-      if (!lastPracticeResponse) {
+  console.log("Previous two trials:", previousTrials);
+  console.log("Retrieved practice response:", responseData);
 
-        console.error("No practice response was saved.");
+  if (
+    !responseData ||
+    responseData.phase !== "practice" ||
+    responseData.trial_type !== "response"
+  ) {
 
-        feedbackTrial.stimulus = `
-          <p style="color:red;">
-            Practice response could not be retrieved.
-          </p>
-        `;
+    console.error("Practice response retrieval failed.");
 
-        feedbackTrial.choices = "NO_KEYS";
+    feedbackTrial.stimulus = `
+      <p style="color:red;">
+        Response retrieval error. Please contact the researcher.
+      </p>
+    `;
 
-        feedbackTrial.trial_duration = 1000;
+    feedbackTrial.choices = "NO_KEYS";
+    feedbackTrial.trial_duration = 1000;
 
-        return;
+    return;
+  }
 
-      }
+  const isCorrect =
+    responseData.response === responseData.correct_key;
 
+  if (isCorrect) {
+
+    feedbackTrial.stimulus = `
+      <div class="feedback-correct">
+        Correct!
+      </div>
+    `;
+
+    feedbackTrial.choices = "NO_KEYS";
+    feedbackTrial.trial_duration = 1000;
+
+  } else {
+
+    const directionText =
+      trial.target_direction === "left"
+        ? "The CENTER arrow points to the LEFT"
+        : "The CENTER arrow points to the RIGHT";
+
+    const reminders =
+      trial.target_direction === "left"
+        ? responseReminders("red", "gray")
+        : responseReminders("gray", "red");
+
+    feedbackTrial.stimulus = `
+      <div class="red-circle"></div>
+
+      <div class="direction-feedback">
+        ${directionText}
+      </div>
+
+      ${reminders}
+    `;
+
+    feedbackTrial.choices = [trial.correct_key];
+    feedbackTrial.trial_duration = null;
+  }
+}
 
       // ----------------------------------
       // CORRECT RESPONSE
