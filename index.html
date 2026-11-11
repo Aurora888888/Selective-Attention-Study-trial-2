@@ -277,10 +277,10 @@ function makeTrials(repetitions) {
 // 6. CREATE A RESPONSE TRIAL
 // ======================================
 
+
 function responseTrial(trial, phase, number) {
 
   return {
-
     type: jsPsychHtmlKeyboardResponse,
 
     stimulus: `
@@ -291,8 +291,7 @@ function responseTrial(trial, phase, number) {
     choices: ["q", "p"],
     trial_duration: 1750,
 
-    data: () => ({
-
+    data: {
       subject_id: subject_id,
       phase: phase,
       trial_type: "response",
@@ -304,23 +303,20 @@ function responseTrial(trial, phase, number) {
 
       congruency: trial.congruency,
 
-      // Inquisit codes:
-      // 1 = congruent, 2 = incongruent
       inquisit_congruence:
         trial.congruency === "congruent" ? 1 : 2,
 
-      // 1 = right, 2 = left
       inquisit_selecttarget:
         trial.target_direction === "right" ? 1 : 2,
 
       target_direction: trial.target_direction,
       correct_key: trial.correct_key
-    }),
+    },
 
     on_finish: function(data) {
 
       data.correct =
-        data.response === trial.correct_key ? 1 : 0;
+        data.response === data.correct_key ? 1 : 0;
 
       data.response_key = data.response;
     }
@@ -716,47 +712,47 @@ function runTask() {
 
     timeline: practiceTimeline,
 
-    loop_function: function(data) {
 
-      practiceAttempt++;
+loop_function: function(data) {
 
-      const responses = jsPsych.data.get()
-        .filter({
-          phase: "practice",
-          trial_type: "response"
-        })
-        .last(8)
-        .values();
+  practiceAttempt++;
 
-      const correctCount = responses.filter(row =>
-        row.correct === 1
-      ).length;
+  const responses = jsPsych.data.get()
+    .filter({
+      phase: "practice",
+      trial_type: "response"
+    })
+    .last(8)
+    .values();
 
-      const accuracy = responses.length === 8
-        ? correctCount / 8
-        : 0;
+  console.log("Practice responses:", responses);
 
-      practicePassed =
-        responses.length === 8 && correctCount >= 6;
+  const correctCount = responses.filter(
+    row => row.correct === 1
+  ).length;
 
-      practiceHistory.push({
+  const accuracy = responses.length === 8
+    ? correctCount / 8
+    : 0;
 
-        practice_attempt: practiceAttempt,
-        practice_correct: correctCount,
-        practice_total: responses.length,
-        practice_accuracy: accuracy,
-        practice_passed: practicePassed
-      });
+  practicePassed =
+    responses.length === 8 && correctCount >= 6;
 
-      console.log("Practice attempt:", practiceAttempt);
-      console.log("Correct answers:", correctCount);
-      console.log("Practice passed:", practicePassed);
+  practiceHistory.push({
+    practice_attempt: practiceAttempt,
+    practice_correct: correctCount,
+    practice_total: responses.length,
+    practice_accuracy: accuracy,
+    practice_passed: practicePassed
+  });
 
-      return !practicePassed && practiceAttempt < 3;
-    }
-  };
+  console.log("Practice attempt:", practiceAttempt);
+  console.log("Number of responses:", responses.length);
+  console.log("Correct answers:", correctCount);
+  console.log("Practice passed:", practicePassed);
 
-  timeline.push(practiceBlock);
+  return !practicePassed && practiceAttempt < 3;
+}
 
 // ======================================
 // TEST INSTRUCTIONS
